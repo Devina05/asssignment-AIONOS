@@ -2,6 +2,8 @@
 
 An **internal employee-support agent for the IT function**, built for the AIONOS *Agentic AI Factory* Assignment 2.
 
+🔗 **Live demo (Streamlit):** https://appapppy-pjozqcjhdtj2sydanpag4c.streamlit.app/
+
 The agent reads an employee's message, matches it to the correct internal policy, asks **one follow-up at a time** in a continuous chat, resolves simple requests, escalates risky or unclear ones, raises a structured ticket, cites the source it used, and keeps an append-only audit trail. It is **deterministic and grounded** — no LLM calls at runtime.
 
 > **Grounding constraint:** the agent answers **only** from the assignment source data — KB-01…KB-10 and the Asset Management Policy extract. It never invents policy. When nothing matches, it says so and escalates instead of guessing.
