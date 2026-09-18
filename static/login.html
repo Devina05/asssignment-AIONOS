@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sign in - Veridian Corp Internal Service Agent</title>
+<style>
+  :root{
+    --bg:#f4f6fb;--panel:#ffffff;--line:#dbe2ee;--line2:#e8edf6;
+    --txt:#1f2a3d;--mut:#5b6b85;--acc:#2456db;--acc2:#e8eefc;
+    --ok:#16825a;--ok2:#e2f4ec;--bad:#c0392b;--bad2:#fdece8;
+    --shadow:0 1px 2px rgba(31,42,61,.06),0 4px 14px rgba(31,42,61,.06);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;font:14px/1.5 "Segoe UI",system-ui,sans-serif;background:var(--bg);color:var(--txt);padding:16px}
+  .card{width:100%;max-width:430px;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:30px;box-shadow:var(--shadow)}
+  .mark{width:44px;height:44px;border-radius:11px;background:linear-gradient(135deg,#2456db,#4d7cff);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:19px;margin-bottom:14px;box-shadow:var(--shadow)}
+  h1{margin:0 0 4px;font-size:21px}
+  .sub{color:var(--mut);font-size:12px;margin-bottom:20px}
+  label{display:block;font-size:12px;color:var(--mut);margin:13px 0 4px;font-weight:600}
+  input{width:100%;background:#fff;color:var(--txt);border:1px solid var(--line);border-radius:9px;padding:10px 12px;font:inherit}
+  input:focus{outline:none;border-color:var(--acc);box-shadow:0 0 0 3px var(--acc2)}
+  .btn{width:100%;margin-top:20px;background:var(--acc);color:#fff;border:none;border-radius:9px;padding:12px;font-weight:700;font-size:14px;cursor:pointer}
+  .btn:hover{filter:brightness(1.06)}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  .toggle{margin-top:18px;text-align:center;font-size:13px;color:var(--mut)}
+  .toggle a{color:var(--acc);cursor:pointer;text-decoration:none;font-weight:600}
+  .msg{margin-top:14px;padding:9px 12px;border-radius:9px;font-size:13px;display:none}
+  .err{background:var(--bad2);color:var(--bad);display:block}
+  .info{background:var(--ok2);color:var(--ok);display:block}
+  .hint{color:var(--mut);font-size:11px;margin-top:4px}
+  .role-note{margin-top:14px;padding:9px 12px;border-radius:9px;font-size:12px;background:var(--acc2);color:var(--acc)}
+</style>
+</head>
+<body>
+<main class="card">
+  <div class="mark">ISA</div>
+  <h1 id="title">Sign in</h1>
+  <div class="sub">Veridian Corp &middot; Internal Service Agent</div>
+
+  <form id="form">
+    <div id="nameWrap" style="display:none">
+      <label for="name">Full name</label>
+      <input id="name" autocomplete="name" placeholder="Aditi Sharma">
+    </div>
+    <label for="email">Work email</label>
+    <input id="email" type="email" autocomplete="username" placeholder="you@veridian-corp.example" required>
+    <label for="password">Password</label>
+    <input id="password" type="password" autocomplete="current-password" placeholder="At least 8 characters" required>
+    <div class="hint" id="pwHint" style="display:none">Use at least 8 characters.</div>
+    <button class="btn" id="submit" type="submit">Sign in</button>
+  </form>
+
+  <div class="msg" id="msg"></div>
+  <div class="role-note">No account? Any @veridian-corp.example email works &mdash; accounts are created on the spot. Allowlisted emails get their scope's desk view: IT staff get the IT Service Desk, Finance staff get the Finance Desk, and admins can oversee everything.</div>
+  <div class="toggle" id="toggle">
+    Not registered? <a id="swap">Create an account</a>
+  </div>
+</main>
+
+<script>
+const $ = s => document.querySelector(s);
+let mode = 'login';
+
+function setMode(next){
+  mode = next;
+  $('#title').textContent = mode === 'login' ? 'Sign in' : 'Create account';
+  $('#submit').textContent = mode === 'login' ? 'Sign in' : 'Sign up';
+  $('#nameWrap').style.display = mode === 'login' ? 'none' : 'block';
+  $('#password').setAttribute('autocomplete', mode === 'login' ? 'current-password' : 'new-password');
+  $('#pwHint').style.display = mode === 'login' ? 'none' : 'block';
+  $('#toggle').innerHTML = mode === 'login'
+    ? 'Not registered? <a id="swap">Create an account</a>'
+    : 'Already registered? <a id="swap">Sign in</a>';
+  $('#swap').onclick = () => setMode(mode === 'login' ? 'signup' : 'login');
+  hideMsg();
+}
+
+function showMsg(text, kind){
+  const m = $('#msg');
+  m.textContent = text;
+  m.className = 'msg ' + (kind || 'err');
+}
+
+function hideMsg(){ $('#msg').className = 'msg'; }
+
+$('#swap').onclick = () => setMode('signup');
+
+$('#form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  hideMsg();
+  const email = $('#email').value.trim();
+  const password = $('#password').value;
+  const name = $('#name').value.trim();
+  const btn = $('#submit');
+  btn.disabled = true;
+  try {
+    const url = mode === 'login' ? '/api/login' : '/api/signup';
+    const body = mode === 'login' ? { email, password } : { email, password, name };
+    const res = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) { showMsg(data.error || 'Something went wrong.'); btn.disabled = false; return; }
+    if (mode === 'signup') {
+      showMsg('Account created. Signing you in...', 'info');
+    }
+    window.location.href = '/';
+  } catch (err) {
+    showMsg('Cannot reach the server: ' + err.message);
+    btn.disabled = false;
+  }
+});
+</script>
+</body>
+</html>

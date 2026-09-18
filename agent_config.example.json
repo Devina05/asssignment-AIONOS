@@ -1,0 +1,16 @@
+{
+  "supabase_url": "https://YOUR-PROJECT.supabase.co",
+  "supabase_key": "YOUR-SERVICE-ROLE-KEY",
+  "supabase_table": "app_users",
+  "session_secret": "replace-with-a-long-random-string",
+  "allowed_domain": "veridian-corp.example",
+  "it_emails": [
+    "you@veridian-corp.example"
+  ],
+  "finance_emails": [
+    "finance@veridian-corp.example"
+  ],
+  "admin_emails": [
+    "admin@veridian-corp.example"
+  ]
+}

@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Veridian Corp - Internal Service Agent</title>
+<style>
+  :root{
+    --bg:#f4f6fb;--panel:#ffffff;--panel2:#eef2f9;--line:#dbe2ee;--line2:#e8edf6;
+    --txt:#1f2a3d;--mut:#5b6b85;--acc:#2456db;--acc2:#e8eefc;
+    --ok:#16825a;--ok2:#e2f4ec;--warn:#b7791f;--warn2:#fdf3dd;
+    --bad:#c0392b;--bad2:#fdece8;--route:#6d28d9;--route2:#f1e9fd;
+    --shadow:0 1px 2px rgba(31,42,61,.06),0 4px 14px rgba(31,42,61,.06);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font:14px/1.5 "Segoe UI",system-ui,sans-serif;background:var(--bg);color:var(--txt)}
+  header{padding:14px 22px;background:var(--panel);border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;position:sticky;top:0;z-index:5}
+  .brand{display:flex;align-items:center;gap:10px}
+  .mark{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,#2456db,#4d7cff);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;box-shadow:var(--shadow)}
+  .brand h1{margin:0;font-size:16px;line-height:1.2}
+  .brand .sub{color:var(--mut);font-size:11px}
+  .who{display:flex;align-items:center;gap:12px;color:var(--mut);font-size:13px}
+  nav{display:flex;gap:2px;padding:10px 18px 0;max-width:1180px;margin:0 auto;flex-wrap:wrap}
+  nav button{background:transparent;border:1px solid transparent;border-bottom:none;color:var(--mut);padding:8px 14px;border-radius:9px 9px 0 0;cursor:pointer;font-size:13px;font-weight:600}
+  nav button:hover{color:var(--acc)}
+  nav button.active{background:var(--panel);color:var(--acc);border-color:var(--line);box-shadow:var(--shadow)}
+  main{padding:18px;max-width:1180px;margin:0 auto}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:16px;box-shadow:var(--shadow)}
+  .panel h2{margin:0 0 12px;font-size:13px;color:var(--mut);text-transform:uppercase;letter-spacing:.05em}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line2);vertical-align:top}
+  th{color:var(--mut);font-weight:600;background:var(--panel2)}
+  tr.row{cursor:pointer}
+  tr.row:hover{background:var(--panel2)}
+  .b{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:700;white-space:nowrap}
+  .resolved{background:var(--ok2);color:var(--ok)}
+  .escalated{background:var(--bad2);color:var(--bad)}
+  .rejected{background:#f1f1f4;color:#6b7280}
+  .pending{background:var(--warn2);color:var(--warn)}
+  .progress{background:var(--acc2);color:var(--acc)}
+  .open{background:#eef1f6;color:#4b5563}
+  textarea{width:100%;min-height:92px;background:#fff;color:var(--txt);border:1px solid var(--line);border-radius:10px;padding:11px;font:inherit;resize:vertical}
+  input,select{background:#fff;color:var(--txt);border:1px solid var(--line);border-radius:9px;padding:9px 11px;font:inherit}
+  .btn{background:var(--acc);color:#fff;border:none;border-radius:9px;padding:10px 20px;font-weight:700;cursor:pointer}
+  .btn:hover{filter:brightness(1.06)}
+  .btn.ghost{background:#fff;color:var(--txt);border:1px solid var(--line)}
+  .btn.danger{background:var(--bad);color:#fff}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  .btn.sm{padding:6px 12px;font-size:12px}
+  .muted{color:var(--mut)}
+  .src{display:inline-block;background:var(--acc2);border:1px solid #d6e1fb;border-radius:6px;padding:1px 8px;margin:2px 4px 2px 0;font-size:11px;color:var(--acc);cursor:pointer}
+  .grid{display:grid;grid-template-columns:1fr 340px;gap:16px;align-items:start}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
+  @media(max-width:860px){.grid,.grid2{grid-template-columns:1fr}}
+  .kv{margin:5px 0;font-size:13px}.kv b{color:var(--mut);font-weight:600}
+  .answer{white-space:pre-wrap;background:var(--panel2);border:1px solid var(--line2);border-radius:9px;padding:10px 12px}
+  .risk{background:var(--bad2);border-left:3px solid var(--bad);padding:7px 11px;margin:6px 0;border-radius:0 7px 7px 0;font-size:13px}
+  .conflict{background:var(--warn2);border-left:3px solid var(--warn);padding:7px 11px;margin:6px 0;border-radius:0 7px 7px 0;font-size:13px}
+  .log{font-family:Consolas,monospace;font-size:12px}
+  .log div{padding:3px 0;border-bottom:1px solid var(--line2)}
+  .tag{color:var(--acc);font-weight:600}
+  .msg{margin-bottom:10px;max-width:86%}
+  .msg .meta{font-size:11px;color:var(--mut);margin-bottom:2px}
+  .msg .body{padding:9px 13px;border-radius:12px;white-space:pre-wrap;font-size:13.5px}
+  .msg.emp .body{background:var(--acc2);border:1px solid #d6e1fb;border-top-left-radius:3px}
+  .msg.agent .body{background:var(--panel2);border:1px solid var(--line2);border-top-right-radius:3px}
+  .turn{margin-bottom:14px}
+  .chips{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}
+  .kbchip{display:inline-block;background:#fff;border:1px solid var(--line);border-radius:999px;padding:6px 14px;font-size:12px;color:var(--acc);cursor:pointer;user-select:none}
+  .kbchip:hover{border-color:var(--acc);background:var(--acc2)}
+  .hint{color:var(--warn);font-size:12px;margin-top:4px}
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:16px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px;box-shadow:var(--shadow)}
+  .card .n{font-size:26px;font-weight:800;margin-top:2px}
+  .card .l{font-size:12px;color:var(--mut);text-transform:uppercase;letter-spacing:.04em}
+  .hero{background:linear-gradient(135deg,#eef2fc,#f7faff);border:1px solid #dbe2ee;border-radius:14px;padding:22px;margin-bottom:16px}
+  .hero h2{margin:2px 0 4px;font-size:22px}
+  .hero p{margin:0 0 12px;color:var(--mut)}
+  .fh{display:flex;gap:10px;margin-top:10px;flex-wrap:wrap}
+  .fh textarea{flex:1;min-width:260px;min-height:52px;height:52px}
+  .page-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:10px;flex-wrap:wrap}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <div class="mark">ISA</div>
+    <div>
+      <h1>Internal Service Agent</h1>
+      <div class="sub">Veridian Corp &middot; IT &middot; grounded in KB-01..KB-10 + Asset Management Policy</div>
+    </div>
+  </div>
+  <div class="who">
+    <span id="who"></span>
+    <button class="btn ghost sm" onclick="logout()">Sign out</button>
+  </div>
+</header>
+<nav id="nav"></nav>
+<main id="view"></main>
+
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => (s==null?"":String(s)).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let USER = null, KB = {}, REQUESTS = [], QUEUE = [], RESTARTING = false;
+
+const STATUS_OPTIONS = ["In Progress","Pending","Pending Security Review","Pending Finance","Pending Manager Approval","Pending Approval","Waiting for Employee","Escalated to Security","Escalated to Human","Resolved","Rejected","Closed"];
+
+function bClass(s){
+  const x = (s||"").toLowerCase();
+  if(x.includes("resolved")) return "resolved";
+  if(x.includes("escalat")) return "escalated";
+  if(x.includes("rejected")) return "rejected";
+  if(x.includes("pending")||x.includes("waiting")||x.includes("approv")) return "pending";
+  if(x.includes("progress")) return "progress";
+  return "open";
+}
+const badge = s => `<span class="b ${bClass(s)}">${esc(s||"Open")}</span>`;
+const badges = srcs => (srcs||[]).map(s=>`<span class="src">${esc(s)}</span>`).join("") || '<span class="muted">none</span>';
+const isAdmin = () => USER && USER.role === "admin";
+const isIT = () => USER && USER.role === "IT";
+const isFin = () => USER && USER.role === "finance";
+const isStaff = () => isAdmin() || isIT() || isFin();
+const roleLabel = () => isAdmin() ? "Admin" : (isIT() ? "IT" : (isFin() ? "Finance" : "Employee"));
+
+async function getJSON(url){
+  const res = await fetch(url);
+  if(res.status === 401){ window.location.href = "/login"; throw new Error("401"); }
+  const data = await res.json().catch(() => ({}));
+  if(!res.ok || data.error) throw new Error(data.error || ("HTTP " + res.status));
+  return data;
+}
+async function postJSON(url, body){
+  const res = await fetch(url, {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body||{})});
+  const data = await res.json().catch(()=>({}));
+  if(data.error) throw new Error(data.error);
+  return data;
+}
+async function logout(){
+  await fetch("/api/logout", {method:"POST"});
+  window.location.href = "/login";
+}
+
+// ---------------------------------------------------------------- navigation
+function tabsFor(){
+  const base = [
+    {id:"home", label:"Home"},
+    {id:"chat", label:"New Request"},
+  ];
+  if(!isStaff()){
+    return [...base,
+      {id:"requests", label:"My Requests"},
+      {id:"mytickets", label:"My Tickets"},
+    ];
+  }
+  const staff = [{id:"requests", label:"Requests"}];
+  if(isAdmin() || isIT()) staff.push({id:"desk", label:"IT Service Desk", scope:"it"});
+  if(isAdmin() || isFin()) staff.push({id:"fdesk", label:"Finance Desk", scope:"finance"});
+  staff.push({id:"queue", label:"Ticket Queue"});
+  if(isAdmin() || isIT()) staff.push({id:"audit", label:"Audit Trail"});
+  staff.push({id:"kb", label:"Knowledge Base"});
+  return [...base, ...staff];
+}
+
+let ACTIVE_SCOPE = null;
+
+function renderNav(){
+  $("#nav").innerHTML = tabsFor().map(t => {
+    return `<button data-tab="${t.id}" data-scope="${t.scope||""}">${esc(t.label)}</button>`;
+  }).join("");
+  document.querySelectorAll("#nav button").forEach(b => b.onclick = () => openTab(b.dataset.tab, b.dataset.scope));
+  openTab("chat");
+}
+
+async function openTab(id, scope){
+  ACTIVE_SCOPE = scope;
+  document.querySelectorAll("#nav button").forEach(b => b.classList.toggle("active", b.dataset.tab === id));
+  const v = $("#view");
+  switch(id){
+    case "home": await renderHome(v); break;
+    case "requests": await renderRequests(v); break;
+    case "mytickets": renderMytickets(v); break;
+    case "chat": renderChat(v); break;
+    case "desk": await renderDesk(v, scope || "it"); break;
+    case "fdesk": await renderDesk(v, scope || "finance"); break;
+    case "queue": await renderQueue(v); break;
+    case "audit": await renderAudit(v); break;
+    case "kb": await renderKB(v); break;
+  }
+  window.scrollTo({top:0});
+}
+
+// ------------------------------------------------------------------ home
+function ticketsOf(reqs){
+  return reqs.filter(r => r.ticket && r.ticket.id).map(r => ({
+    id: r.ticket.id, status: r.ticket.status, request_id: r.request_id,
+    text: r.text, date_opened: r.date_opened,
+  }));
+}
+
+async function renderHome(v){
+  let html = "";
+  if(isStaff()){
+    const scopes = isAdmin()
+      ? [{s:"it", l:"IT Service Desk"},{s:"finance", l:"Finance Desk"}]
+      : isIT() ? [{s:"it", l:"IT Service Desk"}]
+      : [{s:"finance", l:"Finance Desk"}];
+    const stats = {Open:0, "In Progress":0, Pending:0, Escalated:0, Resolved:0};
+    for(const sc of scopes){
+      const desk = await getJSON(`/api/service-desk?scope=${sc.s}`);
+      for(const k of Object.keys(desk.stats)) stats[k] = (stats[k]||0) + (desk.stats[k]||0);
+    }
+    html += `<div class="cards">
+      ${[["Total requests", REQUESTS.length],["Open / In progress", stats["In Progress"]],["Pending", stats.Pending],["Escalated", stats.Escalated],["Resolved", stats.Resolved]].map(([l,n])=>
+        `<div class="card"><div class="l">${l}</div><div class="n">${n}</div></div>`).join("")}
+    </div>
+    <div class="hero"><h2>${esc(roleLabel())} workspace</h2>
+      <p>Oversee the ${scopes.map(s=>s.l).join(" and ")} queue${isAdmin()?"s — you can see every scope":""}.</p>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        ${scopes.map((sc,i)=>`<button class="btn" onclick="openTab('${i===0 ? "desk" : "fdesk"}','${sc.s}')">Open ${sc.l}</button>`).join("")}
+        <button class="btn ghost" onclick="openTab('requests')">All requests</button>
+        <button class="btn ghost" onclick="openTab('chat')">New Request</button>
+      </div></div>`;
+  } else {
+    const myTickets = ticketsOf(REQUESTS);
+    const open = REQUESTS.filter(r => !/resolved|rejected/i.test(r.status||"")).length;
+    const resolved = REQUESTS.filter(r => /resolved|rejected/i.test(r.status||"")).length;
+    const first = (USER.name || USER.email || "").split(" ")[0];
+    html += `<div class="hero"><h2>Welcome back, ${esc(first)}</h2>
+      <p>Raise an IT request and follow its progress. The agent answers from company policy, asks follow-ups, or opens a ticket — and you can see the full conversation and audit trail.</p>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn" onclick="openTab('chat')">+ New Request</button>
+        <button class="btn ghost" onclick="openTab('mytickets')">My Tickets (${myTickets.length})</button>
+        <button class="btn ghost" onclick="openTab('requests')">My Requests</button>
+      </div></div>
+    <div class="cards">
+      <div class="card"><div class="l">Requests</div><div class="n">${REQUESTS.length}</div></div>
+      <div class="card"><div class="l">Open</div><div class="n">${open}</div></div>
+      <div class="card"><div class="l">Resolved</div><div class="n">${resolved}</div></div>
+      <div class="card"><div class="l">Tickets</div><div class="n">${myTickets.length}</div></div>
+    </div>`;
+  }
+  const recent = REQUESTS.slice().reverse().slice(0, 6);
+  html += `<div class="panel"><h2>Recent requests</h2>
+    <table><thead><tr><th>ID</th>${isStaff()?"<th>Employee</th>":""}<th>Date</th><th>Issue</th><th>Status</th><th>Ticket</th></tr></thead>
+    <tbody>${recent.length? recent.map(r=>`<tr>
+      <td>${esc(r.request_id)}</td>${isStaff()?`<td>${esc(r.employee)}</td>`:""}
+      <td class="muted">${esc(r.date_opened||"")}</td><td>${esc((r.text||"").slice(0,80))}</td>
+      <td>${badge(r.status)}</td><td>${r.ticket && r.ticket.id ? `<span class="src">${esc(r.ticket.id)}</span>` : '<span class="muted">no ticket</span>'}</td>
+    </tr>`).join("") : `<tr><td colspan="6" class="muted">No requests yet — start with a new request.</td></tr>`}
+    </tbody></table></div>`;
+  v.innerHTML = html;
+  $("#who").textContent = `${USER.name || USER.email} · ${roleLabel()}`;
+}
+
+// ------------------------------------------------------------- my tickets
+function renderMytickets(v){
+  const myTickets = ticketsOf(REQUESTS);
+  v.innerHTML = `<div class="panel"><h2>My Tickets</h2>
+    <div class="muted" style="margin-bottom:10px">Tickets opened on your requests by the service agent. Select one to see the full conversation and audit trail.</div>
+    <table><thead><tr><th>Ticket</th><th>Request</th><th>Issue</th><th>Status</th><th>Opened</th></tr></thead>
+    <tbody>${myTickets.length? myTickets.map(t=>`<tr>
+      <td><span class="src">${esc(t.id)}</span></td><td>${esc(t.request_id)}</td>
+      <td>${esc((t.text||"").slice(0,80))}</td><td>${badge(t.status)}</td>
+      <td class="muted">${esc(t.date_opened||"")}</td></tr>`).join("")
+      : `<tr><td colspan="5" class="muted">No tickets yet. Not every request creates one — simple self-service answers (e.g. guest Wi-Fi) resolve without a ticket.</td></tr>`}
+    </tbody></table></div>`;
+}
+
+// ----------------------------------------------------------------- requests
+async function renderRequests(v){
+  v.innerHTML = `<div class="panel"><div class="page-top"><h2>${isStaff()?"Requests":"My Requests"}</h2><button class="btn" onclick="openTab('chat')">+ New Request</button></div>
+    <table><thead><tr><th>ID</th>${isStaff()?"<th>Employee</th>":""}<th>Date</th><th>Issue</th><th>Status</th><th>Ticket</th></tr></thead>
+    <tbody>${REQUESTS.map(r=>`<tr>
+      <td>${esc(r.request_id)}</td>${isStaff()?`<td>${esc(r.employee)}</td>`:""}
+      <td class="muted">${esc(r.date_opened||"")}</td><td>${esc((r.text||"").slice(0,90))}</td>
+      <td>${badge(r.status)}</td><td>${r.ticket && r.ticket.id ? `<span class="src">${esc(r.ticket.id)}</span>` : '<span class="muted">no ticket</span>'}</td>
+    </tr>`).join("")}</tbody></table></div>`;
+}
+
+// ------------------------------------------------------------------- chat
+let CHAT_RID = null;
+
+function renderChat(v){
+  v.innerHTML = `<div class="panel">
+      <h2>New Request</h2>
+      <div class="muted" style="margin-bottom:8px">Describe your request in your own words. The agent goes step by step, asking one question at a time, until it can help you directly, open a tracking ticket, or route you to a team member.</div>
+      <div class="chips" id="chatChips"></div>
+      <div class="fh"><textarea id="chatText" placeholder="e.g. My laptop won't turn on, had it about 3.5 years"></textarea>
+      <button class="btn" onclick="sendChat()">Send</button></div>
+    </div><div id="chatThread"></div>`;
+  CHAT_RID = null;
+  const QUICK = [
+    "Guest Wi-Fi for a visitor",
+    "VPN credentials expired",
+    "Laptop won't turn on (3.5 years old)",
+    "Mailbox full, quota increase needed",
+    "Locked out after 5 attempts",
+    "Data-analysis tool not in the catalog",
+    "Home office monitor (WFH 4 days/week)",
+    "Phishing email, I opened it",
+  ];
+  document.getElementById("chatChips").innerHTML = QUICK.map(q=>`<span class="kbchip" onclick="const e=document.getElementById('chatText');e.value=this.textContent;e.focus()">${esc(q)}</span>`).join("");
+  chatThread().innerHTML = "";
+}
+
+function chatThread(){ return document.getElementById("chatThread"); }
+
+function newChat(){
+  const th = chatThread(); if(th) th.innerHTML = "";
+  const t = document.getElementById("chatText"); if(t){ t.value = ""; t.focus(); }
+  CHAT_RID = null;
+}
+
+function chatCard(r){
+  const rid = r.request_id;
+  const fq = (r.follow_up_questions || []);
+  const canAct = r.can_act !== false;
+  const scope = r.scope || "it";
+  const scopeLabel = scope === "finance" ? "Finance Desk" : "IT Service Desk";
+  let h = `<div class="msg agent"><div class="meta">Internal Service Agent</div><div class="body">${esc(r.answer)}</div></div>`;
+  if(fq.length){
+    h += `<div class="msg agent" style="margin-top:8px"><div class="body">${esc(fq[0])}</div></div>`;
+    if(canAct){
+      h += `<div style="margin-top:10px" class="fh"><textarea id="fuText" placeholder="Your answer…" style="min-height:48px;height:48px"></textarea>
+        <button class="btn" onclick="sendChatReply('${esc(rid)}', this)">Send answer</button>
+        <button class="btn ghost" onclick="escalateChat('${esc(rid)}', this)">Talk to a person</button>
+      </div><div class="hint" id="fuHint" style="display:none">Add a short answer so we can keep going.</div>`;
+    } else {
+      h += `<div class="panel" style="margin-top:10px"><div class="kv">This request is outside your scope — it is handled at the ${scopeLabel}. Reply to the question and manage it from there.</div>
+        <button class="btn sm" onclick="openTab('${scope === "finance" ? "fdesk" : "desk"}','${scope}')">Open ${scopeLabel}</button></div>`;
+    }
+  } else {
+    const tk = r.ticket && r.ticket.id;
+    h += `<div class="panel" style="margin-top:10px">
+      <div class="kv">${tk ? `A ticket (<span class="src">${esc(tk)}</span>) was opened to track this.` : "No ticket was needed for this one."}</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+        <button class="btn ghost sm" onclick="openTab('requests')">View my requests</button>
+        <button class="btn sm" onclick="newChat()">Start a new request</button>
+      </div></div>`;
+  }
+  return h;
+}
+
+function appendTurn(html){
+  const th = chatThread();
+  const tmp = document.createElement("div");
+  tmp.innerHTML = html;
+  const node = tmp.firstElementChild;
+  th.appendChild(node);
+  node.scrollIntoView({behavior:"smooth", block:"nearest"});
+  return node;
+}
+
+async function sendChat(){
+  const ta = document.getElementById("chatText");
+  const t = ta.value.trim();
+  if(!t){ ta.focus(); return; }
+  ta.value = "";
+  const turn = appendTurn(`<div class="turn"><div class="msg emp"><div class="meta">${esc(USER.name || USER.email)}</div><div class="body">${esc(t)}</div></div><div class="panel"><div class="muted">Thinking…</div></div></div>`);
+  const wait = turn.lastElementChild;
+  try{
+    const r = await postJSON("/api/request", {text: t});
+    CHAT_RID = r.request_id;
+    wait.outerHTML = chatCard(r);
+    REQUESTS = await getJSON("/api/requests");
+  }catch(e){
+    wait.outerHTML = `<div class="panel"><div class="risk">! ${esc(e.message)}</div></div>`;
+  }
+}
+
+async function sendChatReply(rid, btn){
+  const ta = document.getElementById("fuText");
+  const t = ta && ta.value.trim();
+  if(!t){
+    const hint = document.getElementById("fuHint"); if(hint) hint.style.display = "block";
+    return;
+  }
+  btn.disabled = true;
+  try{
+    const r = await postJSON("/api/request", {request_id: rid, answer: t});
+    CHAT_RID = r.request_id;
+    btn.closest(".turn").lastElementChild.outerHTML = chatCard(r);
+    REQUESTS = await getJSON("/api/requests");
+  }catch(e){ alert(e.message); btn.disabled = false; }
+}
+
+async function escalateChat(rid, btn){
+  if(!confirm("Route this request to a person on the service team?")) return;
+  btn.disabled = true;
+  try{
+    const r = await postJSON("/api/escalate", {request_id: rid});
+    btn.closest(".turn").lastElementChild.outerHTML = chatCard(r);
+    REQUESTS = await getJSON("/api/requests");
+  }catch(e){ alert(e.message); btn.disabled = false; }
+}
+
+// -------------------------------------------------------------- service desk
+let DESK = null, DESK_DETAIL = null;
+
+async function renderDesk(v, scope){
+  ACTIVE_SCOPE = scope || "it";
+  const title = ACTIVE_SCOPE === "finance" ? "Finance Desk" : "IT Service Desk";
+  v.innerHTML = `<div class="panel"><h2>${esc(title)}</h2>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">
+      <input id="deskQ" placeholder="Search ticket, employee, issue…" oninput="debounceDesk()">
+      <select id="deskFilter" onchange="refreshDesk()">
+        <option value="">All statuses</option>
+        ${STATUS_OPTIONS.map(s=>`<option>${esc(s)}</option>`).join("")}
+      </select>
+      <button class="btn ghost sm" onclick="refreshDesk()">Refresh</button>
+    </div></div>
+    <div id="deskStats"></div>
+    <div class="grid">
+      <div class="panel"><h2>Ticket queue</h2><table><thead><tr><th>Ticket</th><th>Employee</th><th>Issue summary</th><th>Status</th></tr></thead>
+      <tbody id="deskRows"></tbody></table></div>
+      <div id="deskDetail"><div class="panel"><h2>Ticket detail</h2><div class="muted">Select a ticket to manage it.</div></div></div>
+    </div>`;
+  await refreshDesk();
+}
+let deskTimer = null;
+function debounceDesk(){ clearTimeout(deskTimer); deskTimer = setTimeout(refreshDesk, 400); }
+
+async function refreshDesk(){
+  const q = encodeURIComponent(document.getElementById("deskQ").value.trim());
+  const sf = document.getElementById("deskFilter").value;
+  const url = `/api/service-desk?scope=${encodeURIComponent(ACTIVE_SCOPE || "it")}&q=${q}&status=${encodeURIComponent(sf)}`;
+  DESK = await getJSON(url);
+  document.getElementById("deskStats").innerHTML = `<div class="cards">${
+    Object.entries(DESK.stats).map(([k,n])=>`<div class="card"><div class="l">${esc(k)}</div><div class="n">${n}</div></div>`).join("")}</div>`;
+  document.getElementById("deskRows").innerHTML = DESK.queue.map(t=>`<tr class="row" onclick="deskPick('${esc(t.id)}')">
+    <td><span class="src">${esc(t.id)}</span></td><td>${esc(t.employee)}</td>
+    <td>${esc((t.issue||t.summary||"").slice(0,80))}</td><td>${badge(t.status)}</td></tr>`).join("")
+    || `<tr><td colspan="4" class="muted">No matching tickets.</td></tr>`;
+}
+
+async function deskPick(tid){
+  try{ DESK_DETAIL = await getJSON(`/api/ticket-detail?ticket_id=${encodeURIComponent(tid)}`); }
+  catch(e){ alert(e.message); return; }
+  const d = DESK_DETAIL;
+  const msgs = (d.messages||[]).map(m=>`<div class="msg ${m.sender === "employee" ? "emp":"agent"}"><div class="meta">${m.sender === "employee"?"Employee":"Agent"} · ${esc(m.created_at||"")}</div><div class="body">${esc(m.body)}</div></div>`).join("");
+  const isAgent = d.origin === "agent";
+  document.getElementById("deskDetail").innerHTML = `<div class="panel"><h2>${esc(d.id)}</h2>
+    <div>${badge(d.status)} <span class="muted">${esc(d.priority||"")} · ${esc(d.category||"")}</span></div>
+    <div class="kv"><b>Employee</b> ${esc(d.employee)} ${d.email?`<span class="muted">(${esc(d.email)})</span>`:""}</div>
+    <div class="kv"><b>Issue</b> ${esc(d.request_text || d.issue || d.summary || "")}</div>
+    <div class="kv"><b>Summary</b> ${esc(d.summary||"")}</div>
+    ${d.escalate_to?`<div class="kv"><b>Escalated to</b> ${esc(d.escalate_to)}</div>`:""}
+    ${d.note?`<div class="kv"><b>Note</b> ${esc(d.note)}</div>`:""}
+    <div class="kv"><b>Sources</b> ${badges(d.sources)}</div>
+    ${msgs?`<div style="margin-top:8px">${msgs}</div>`:""}
+    ${d.origin === "history" ? `<div class="kv"><span class="b rejected">Reference only</span> <span class="muted">Ticket queue precedent — read-only.</span></div>`
+      : `<div style="margin-top:12px"><label style="font-size:12px;color:var(--mut)"><b>Update status</b></label>
+         <div style="display:flex;gap:8px;margin-top:4px">
+           <select id="statusSel">${STATUS_OPTIONS.map(s=>`<option ${s===d.status?"selected":""}>${esc(s)}</option>`).join("")}</select>
+           <button class="btn sm" onclick="updateStatus('${esc(d.id)}')">Update</button>
+         </div></div>`}
+  </div>`;
+}
+
+async function updateStatus(tid){
+  const status = document.getElementById("statusSel").value;
+  if(!confirm(`Set ${tid} to "${status}"?`)) return;
+  try{
+    await postJSON("/api/ticket-status", {ticket_id:tid, status});
+    await refreshDesk(); await deskPick(tid);
+  }catch(e){ alert(e.message); }
+}
+
+// ------------------------------------------------------------------- queue
+async function renderQueue(v){
+  if(!QUEUE.length) QUEUE = await getJSON("/api/seed-tickets");
+  v.innerHTML = `<div class="panel"><h2>Ticket Queue — pre-existing reference (TK-1042–TK-1051), precedent only, read-only</h2>
+    <table><thead><tr><th>Ticket</th><th>Employee</th><th>Issue</th><th>Status</th><th>Agent note</th></tr></thead>
+    <tbody>${QUEUE.map(t=>`<tr>
+      <td><span class="src">${esc(t.id)}</span> ${t.open?'<span class="b pending">active</span>':""}</td>
+      <td>${esc(t.employee)}</td><td>${esc(t.issue||t.summary||"")}</td>
+      <td>${badge(t.status)}</td><td class="muted">${esc(t.note||"")} ${badges(t.sources)}</td></tr>`).join("")}</tbody></table></div>`;
+}
+
+// ------------------------------------------------------------------- audit
+async function renderAudit(v){
+  const log = await getJSON("/api/audit");
+  v.innerHTML = `<div class="panel"><h2>Audit Trail (append-only)</h2><div class="log">${
+    log.slice().reverse().map(e=>`<div>${esc(e.ts)} <span class="tag">[${esc(e.step)}]</span> ${esc(e.detail)}
+      ${e.request_id?`<span class="muted">(${esc(e.request_id)})</span>`:""}
+      ${e.ticket_id?`<span class="src">${esc(e.ticket_id)}</span>`:""}
+      ${e.sources && e.sources.length?`<span class="muted">${esc(e.sources.join(", "))}</span>`:""}</div>`).join("")}</div></div>`;
+}
+
+// ------------------------------------------------------------------- KB
+async function renderKB(v){
+  if(!Object.keys(KB).length) KB = await getJSON("/api/kb");
+  v.innerHTML = `<div class="panel"><h2>Knowledge Base &amp; Policies</h2>
+    ${Object.entries(KB).map(([id,d])=>`<div class="kv" style="padding:8px 0;border-bottom:1px solid var(--line2)">
+      <span class="src">${esc(id)}</span> <b>${esc(d.title)}</b> <span class="muted">— ${esc(d.category||"")}${d.issued_by?` · ${esc(d.issued_by)}`:""}</span>
+      <div class="muted">${esc(d.text)}</div></div>`).join("")}</div>`;
+}
+
+// ------------------------------------------------------------------ boot
+async function boot(){
+  $("#who").textContent = "…";
+  const res = await fetch("/api/me");
+  if(res.status === 401){ window.location.href = "/login"; return; }
+  USER = await res.json();
+  REQUESTS = await getJSON("/api/requests");
+  if(!Object.keys(KB).length){
+    try{ KB = await getJSON("/api/kb"); }catch(e){ KB = {}; }
+  }
+  renderNav();
+}
+boot();
+</script>
+</body>
+</html>

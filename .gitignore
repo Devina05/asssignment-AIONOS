@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+agent_config.json
+.env
+var/
+*.db
+*.db-journal
