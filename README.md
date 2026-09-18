@@ -29,6 +29,33 @@ python -m app.main --selftest       # prints the agent's disposition of all stor
 python -m unittest discover tests   # core-flow test suite (uses a temp DB)
 ```
 
+**Hosting on Streamlit Community Cloud**
+
+A Streamlit frontend (`streamlit_app.py`) reuses the engine in-process (the HTTP server in `app/server.py` is not involved):
+
+1. Deploy the repo from Streamlit Cloud; set **Main file path** to `streamlit_app.py`.
+2. Create the `app_users` table once in your Supabase project (SQL Editor → Run):
+   ```sql
+   create table public.app_users (
+     id uuid primary key default gen_random_uuid(),
+     email text not null,
+     name text default '',
+     password_hash text not null,
+     role text default 'employee'
+   );
+   ```
+3. Add secrets in **Manage app → … → Settings → Secrets** (the app loads them as env vars at startup):
+   ```toml
+   SUPABASE_URL="https://<project-ref>.supabase.co"
+   SUPABASE_KEY="sb_secret_..."        # or legacy service_role key
+   # optional — restrict sign-up domain / grant staff roles:
+   # ALLOWED_DOMAIN="veridian-corp.example"
+   # IT_EMAILS="..."  FINANCE_EMAILS="..."  ADMIN_EMAILS="..."
+   ```
+4. Run locally with `streamlit run streamlit_app.py`.
+
+> Note: on Streamlit Cloud `var/agent.db` lives on an ephemeral disk, so the agent's operational store resets on redeploys. Accounts live in Supabase and survive.
+
 ---
 
 ## 3. Roles, segregation & credentials
