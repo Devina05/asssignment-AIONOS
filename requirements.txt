@@ -1,2 +1,2 @@
-# Veridian IT Service Agent - stdlib only, no third-party dependencies.
-# Python 3.9+ is enough. (Optional dev: nothing extra required; tests use unittest.)
+# Veridian IT Service Agent - engine is stdlib only; Streamlit frontend for hosting.
+streamlit>=1.30
