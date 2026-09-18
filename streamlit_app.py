@@ -8,7 +8,19 @@ Auth requires SUPABASE_URL / SUPABASE_KEY (+ allowlists) configured
 as env vars / Streamlit secrets before sign-in works.
 """
 
+import os
+
 import streamlit as st
+
+_SECRET_KEYS = ("SUPABASE_URL", "SUPABASE_KEY", "SUPABASE_TABLE", "SESSION_SECRET",
+                "SESSION_TTL", "ALLOWED_DOMAIN", "IT_EMAILS", "FINANCE_EMAILS",
+                "ADMIN_EMAILS")
+try:
+    for _k in _SECRET_KEYS:
+        if _k in st.secrets:
+            os.environ[_k] = str(st.secrets[_k])
+except Exception:
+    pass
 
 from app import agent, auth, db
 from app.config import configured
